@@ -1,55 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login</title>
-  <link rel="stylesheet" href="/style.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
 
-<div class="login-box">
-  <form id="loginForm">
-    <input
-      type="password"
-      id="password"
-      placeholder="Password"
-      required
-    >
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: Inter, sans-serif;
+      }
 
-    <button type="submit">^</button>
-  </form>
+      body {
+        min-height: 100vh;
+        background: #09090b;
+      }
 
-  <p id="msg"></p>
-</div>
+      .login-box {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
 
-<script>
-const form = document.getElementById("loginForm");
-const msg = document.getElementById("msg");
+        width: 260px;
 
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
+        background: #0b0b0e;
+        border: 1px solid #1f1f23;
 
-  const password = document.getElementById("password").value;
+        border-radius: 14px;
+        padding: 10px;
 
-  const res = await fetch("/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ password })
-  });
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      }
 
-  const data = await res.json();
+      #loginForm {
+        display: flex;
+      }
 
-  if (!data.success) {
-    msg.innerText = data.message;
-    return;
-  }
+      #password {
+        width: 100%;
+        height: 42px;
 
-  location.href = "/hm.html";
-});
-</script>
+        border: none;
+        outline: none;
 
-</body>
+        border-radius: 10px;
+
+        background: #111114;
+        border: 1px solid #1f1f23;
+
+        color: #e5e5e5;
+        padding: 0 12px;
+
+        font-size: 14px;
+      }
+
+      #password::placeholder {
+        color: #6b7280;
+      }
+
+      #password:focus {
+        border-color: #2563eb;
+      }
+
+      #msg {
+        margin-top: 6px;
+        font-size: 12px;
+        color: #ef4444;
+        min-height: 14px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="login-box">
+      <form id="loginForm">
+        <input
+          type="password"
+          id="password"
+          placeholder="wellcome!"
+          required
+          autocomplete="off"
+        />
+      </form>
+
+      <p id="msg"></p>
+    </div>
+
+    <script>
+      const form = document.getElementById("loginForm");
+      const msg = document.getElementById("msg");
+      const passwordInput = document.getElementById("password");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const password = passwordInput.value.trim();
+        if (!password) return;
+
+        msg.textContent = "";
+
+        try {
+          const res = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password }),
+          });
+
+          const data = await res.json();
+
+          if (!data.success) {
+            msg.textContent = data.message || "Invalid password";
+            return;
+          }
+
+          location.href = "/hm.html";
+        } catch (err) {
+          msg.textContent = "Server error";
+        }
+      });
+    </script>
+  </body>
 </html>
