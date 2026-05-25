@@ -1,38 +1,623 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard</title>
-  <link rel="stylesheet" href="/style.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
 
-<div class="container">
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: Inter, sans-serif;
+      }
 
-  <div class="topbar">
-    <h1>P:</h1>
+      body {
+        background: #09090b;
+        color: #e5e5e5;
+      }
 
- <!--    <a href="/logout" class="logout-btn">
-      Logout
-    </a> -->
+      /* TOP BAR */
+      .topbar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
 
-    <button id="logoutBtn" class="logout-btn">
-  Logout
-</button>
-  </div>
+        padding: 12px 16px;
+        background: #0b0b0e;
+        border-bottom: 1px solid #1f1f23;
+       }
 
-  <div class="upload-box">
-    <input type="file" id="fileInput">
-    <button id="uploadBtn">Upload</button>
-  </div>
+      .topbar h1 {
+        font-size: 16px;
+        font-weight: 500;
+        color: #9ca3af;
+      }
 
-  <div id="status"></div>
+      .icon-btn {
+        background: #111114;
+        border: 1px solid #1f1f23;
+        color: #e5e5e5;
 
-  <div class="files" id="files"></div>
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
 
-</div>
+        display: flex;
+        align-items: center;
+        justify-content: center;
 
-<script src="/app.js"></script>
-</body>
+        cursor: pointer;
+        transition: 0.2s;
+      }
+
+      .icon-btn:hover {
+        background: #1a1a1f;
+      }
+
+      /* UPLOAD */
+      .upload-box {
+        display: flex;
+        gap: 10px;
+        padding: 16px;
+      }
+
+      input[type="file"] {
+        flex: 1;
+        background: #111114;
+        border: 1px solid #1f1f23;
+        padding: 10px;
+        border-radius: 10px;
+        color: #9ca3af;
+      }
+
+      /* FILE LIST */
+      .files {
+        padding: 16px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        padding: 12px;
+        border-radius: 12px;
+
+        background: #0b0b0e;
+        border: 1px solid #1f1f23;
+      }
+
+      .file-info {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .file-info small {
+        color: #6b7280;
+        font-size: 12px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .action-btn {
+        width: 34px;
+        height: 34px;
+
+        border-radius: 10px;
+        border: 1px solid #1f1f23;
+        background: #111114;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        cursor: pointer;
+        transition: 0.2s;
+      }
+
+      .action-btn:hover {
+        background: #1a1a1f;
+      }
+
+      .delete:hover {
+        border-color: #ef4444;
+      }
+
+      /* TOAST */
+      .toast {
+        position: fixed;
+        bottom: 18px;
+        left: 18px;
+
+        background: #111114;
+        border: 1px solid #1f1f23;
+        padding: 10px 14px;
+        border-radius: 12px;
+
+        font-size: 13px;
+        color: #e5e5e5;
+
+        opacity: 0;
+        transform: translateY(10px);
+        transition: 0.3s;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* RESPONSIVE */
+      /*  @media (max-width:600px){
+    .upload-box{
+      flex-direction:column;
+    }
+  }*/
+
+      .upload-box {
+        display: flex;
+        gap: 10px;
+        padding: 16px;
+        align-items: stretch;
+      }
+
+      .drop-zone {
+        flex: 1;
+        background: #0b0b0e;
+        border: 1px dashed #2a2a30;
+        border-radius: 14px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        cursor: pointer;
+        transition: 0.2s;
+
+        min-height: 90px;
+      }
+
+      .drop-zone:hover {
+        border-color: #3b82f6;
+        background: #0f0f14;
+      }
+
+      .drop-zone.active {
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.08);
+      }
+
+      .drop-content {
+        text-align: center;
+        color: #9ca3af;
+      }
+
+      .drop-content .icon {
+        font-size: 20px;
+        margin-bottom: 4px;
+        color: #e5e5e5;
+      }
+
+      .drop-content .text {
+        font-size: 13px;
+      }
+
+      .drop-content small {
+        font-size: 11px;
+        color: #6b7280;
+      }
+
+      .selected-files {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .file-chip {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        padding: 8px 10px;
+        border-radius: 10px;
+
+        background: #111114;
+        border: 1px solid #1f1f23;
+
+        font-size: 12px;
+        color: #d1d5db;
+      }
+
+      .file-chip button {
+        background: none;
+        border: none;
+        color: #ef4444;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      #files,
+      #receivedFiles {
+        margin-bottom: 30px;
+        padding: 10px;
+        border: 1px solid #2a2a2a;
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="topbar">
+      <h1>Dashboard</h1>
+      <button id="toggleReceive">Receive Mode: OFF</button>
+      <button class="icon-btn" id="logoutBtn" title="Logout">⎋</button>
+    </div>
+
+    <div class="upload-box">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" multiple hidden />
+
+        <div class="drop-content">
+          <div class="icon">⬆</div>
+          <div class="text">Drag & drop files</div>
+          <small>or click to browse</small>
+        </div>
+      </div>
+
+      <div class="selected-files" id="selectedFiles"></div>
+
+      <button class="icon-btn" id="uploadBtn" title="Upload">⬆</button>
+    </div>
+    <h3>Received Files</h3>
+    <div id="receivedFiles"></div>
+
+    <h3>Main Files</h3>
+
+    <div class="files" id="files"></div>
+    <h3>Shared Files</h3>
+    <div class="files" id="sharedFiles"></div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+      const sharedFilesDiv = document.getElementById("sharedFiles");
+
+      async function loadSharedFiles() {
+        const res = await fetch("/api/shared-files");
+        const files = await res.json();
+
+        sharedFilesDiv.innerHTML = "";
+
+        if (!files.length) {
+          sharedFilesDiv.innerHTML =
+            "<p style='color:#6b7280'>No shared files</p>";
+
+          return;
+        }
+
+        files.forEach((file) => {
+          const div = document.createElement("div");
+
+          div.className = "file-item";
+
+          div.innerHTML = `
+      <div class="file-info">
+        <div>${file.name}</div>
+        <small>${formatSize(file.size)}</small>
+      </div>
+
+      <div class="actions">
+
+        <a class="action-btn"
+          href="/public-download/${encodeURIComponent(file.name)}"
+          target="_blank">
+          🌍
+        </a>
+
+        <button
+          class="action-btn delete"
+          onclick="unshareFile('${file.name}')">
+          ❌
+        </button>
+
+      </div>
+    `;
+
+          sharedFilesDiv.appendChild(div);
+        });
+      }
+
+      async function unshareFile(name) {
+        await fetch("/unshare-file", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name }),
+        });
+
+        showToast("Removed public access");
+
+        loadSharedFiles();
+      }
+
+      const toggleBtn = document.getElementById("toggleReceive");
+
+      toggleBtn.addEventListener("click", async () => {
+        const res = await fetch("/toggle-receive");
+        const data = await res.json();
+
+        toggleBtn.innerText =
+          "Receive Mode: " + (data.receiveMode ? "ON" : "OFF");
+      });
+
+      const receivedDiv = document.getElementById("receivedFiles");
+
+      async function loadReceived() {
+        const res = await fetch("/api/received");
+        const files = await res.json();
+
+        receivedDiv.innerHTML = "";
+
+        files.forEach((file) => {
+          const div = document.createElement("div");
+          div.className = "file-item";
+
+          div.innerHTML = `
+      <div>
+        <div>${file.name}</div>
+        <small>${formatSize(file.size)}</small>
+      </div>
+
+      <div class="file-actions">
+        <a class="action-btn download" href="/download/received/${file.name}">
+          ⬇
+        </a>
+      </div>
+      
+    `;
+
+          receivedDiv.appendChild(div);
+        });
+      }
+
+      loadReceived();
+      const dropZone = document.getElementById("dropZone");
+      const fileInput = document.getElementById("fileInput");
+      const selectedFilesDiv = document.getElementById("selectedFiles");
+      const uploadBtn = document.getElementById("uploadBtn");
+
+      let selectedFiles = [];
+
+      /* ---------- RENDER SELECTED FILES ---------- */
+      function renderFiles() {
+        selectedFilesDiv.innerHTML = "";
+
+        if (selectedFiles.length === 0) return;
+
+        selectedFiles.forEach((file, index) => {
+          const div = document.createElement("div");
+          div.className = "file-chip";
+
+          div.innerHTML = `
+      <span>${file.name}</span>
+      <button onclick="removeFile(${index})">✕</button>
+    `;
+
+          selectedFilesDiv.appendChild(div);
+        });
+      }
+
+      /* ---------- REMOVE FILE ---------- */
+      window.removeFile = function (index) {
+        selectedFiles.splice(index, 1);
+        renderFiles();
+      };
+
+      /* ---------- ADD FILES ---------- */
+      function addFiles(files) {
+        selectedFiles = [...selectedFiles, ...Array.from(files)];
+        renderFiles();
+      }
+
+      /* ---------- CLICK TO OPEN ---------- */
+      dropZone.addEventListener("click", () => fileInput.click());
+
+      fileInput.addEventListener("change", () => {
+        addFiles(fileInput.files);
+        fileInput.value = "";
+      });
+
+      /* ---------- DRAG & DROP ---------- */
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("active");
+      });
+
+      dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("active");
+      });
+
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("active");
+
+        addFiles(e.dataTransfer.files);
+      });
+
+      /* ---------- UPLOAD MULTIPLE FILES ---------- */
+      uploadBtn.addEventListener("click", async () => {
+        if (selectedFiles.length === 0) {
+          showToast("No files selected");
+          return;
+        }
+
+        for (let file of selectedFiles) {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          await fetch("/upload", {
+            method: "POST",
+            body: formData,
+          });
+        }
+
+        showToast("Upload complete");
+        selectedFiles = [];
+        renderFiles();
+        loadFiles();
+      });
+
+      const filesDiv = document.getElementById("files");
+      const toast = document.getElementById("toast");
+
+      function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add("show");
+
+        setTimeout(() => {
+          toast.classList.remove("show");
+        }, 2000);
+      }
+
+      /* LOGOUT */
+      document
+        .getElementById("logoutBtn")
+        .addEventListener("click", async () => {
+          await fetch("/logout", { method: "GET", credentials: "include" });
+          window.location.replace("/ap");
+        });
+
+      /* LOAD FILES */
+      async function loadFiles() {
+        const res = await fetch("/api/files");
+
+        if (!res.ok) {
+          location.href = "/ap";
+          return;
+        }
+
+        const files = await res.json();
+        filesDiv.innerHTML = "";
+
+        if (!files.length) {
+          filesDiv.innerHTML = "<p style='color:#6b7280'>No files</p>";
+          return;
+        }
+
+        files.forEach((file) => {
+          const div = document.createElement("div");
+          div.className = "file-item";
+
+          div.innerHTML = `
+      <div class="file-info">
+        <div>${file.name}</div>
+        <small>${formatSize(file.size)}</small>
+      </div>
+
+      <div class="actions">
+        <a class="action-btn" href="/download/file/${encodeURIComponent(
+          file.name
+        )}" title="Download">
+          ⬇
+        </a>
+
+        <button class="action-btn delete" title="Delete"
+          onclick="deleteFile('${file.name}')">
+          🗑
+        </button>
+
+        <button
+          class="action-btn"
+          onclick="shareFile('${file.name}')"
+        >
+          🔗
+        </button>
+      </div>
+    `;
+
+          filesDiv.appendChild(div);
+        });
+      }
+
+      async function shareFile(name) {
+        await fetch("/share-file", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name }),
+        });
+
+        showToast("File shared publicly");
+
+        loadSharedFiles();
+      }
+
+      /* DELETE */
+      async function deleteFile(name) {
+        if (!confirm("Delete file?")) return;
+
+        await fetch(`/delete/${encodeURIComponent(name)}`, {
+          method: "DELETE",
+        });
+
+        loadFiles();
+      }
+
+      /* UPLOAD */
+      document
+        .getElementById("uploadBtn")
+        .addEventListener("click", async () => {
+          const file = fileInput.files[0];
+
+          if (!file) {
+            showToast("Select a file");
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append("file", file);
+
+          showToast("Uploading...");
+
+          const res = await fetch("/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            showToast("Upload successful");
+            fileInput.value = "";
+            loadFiles();
+          } else {
+            showToast("Upload failed");
+          }
+        });
+
+      function formatSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        if (bytes < 1024 * 1024 * 1024)
+          return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+        return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
+      }
+
+      loadFiles();
+      loadSharedFiles();
+    </script>
+  </body>
 </html>
