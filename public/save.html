@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Shared Files</title>
+
+    <style>
+      body {
+        font-family: Arial;
+        background: #0f172a;
+        color: white;
+        padding: 20px;
+      }
+
+      .file {
+        background: #1e293b;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      a {
+        color: white;
+        text-decoration: none;
+        background: #2563eb;
+        padding: 8px 12px;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h2>📁 Shared Files</h2>
+
+    <div id="files"></div>
+
+    <script>
+      async function load() {
+        const res = await fetch("/api/shared-files");
+        const files = await res.json();
+
+        const box = document.getElementById("files");
+
+        box.innerHTML = "";
+
+        if (!files.length) {
+          box.innerHTML = "<p>No shared files</p>";
+          return;
+        }
+
+        files.forEach((file) => {
+          box.innerHTML += `
+      <div class="file">
+        <div>
+          <div>${file.name}</div>
+          <small>${formatSize(file.size)}</small>
+        </div>
+
+        <a href="/public-download/${encodeURIComponent(file.name)}">
+          Download
+        </a>
+      </div>
+    `;
+        });
+      }
+
+      function formatSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        if (bytes < 1024 * 1024 * 1024) {
+          return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+        }
+
+        return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
+      }
+
+      load();
+    </script>
+  </body>
+</html>
