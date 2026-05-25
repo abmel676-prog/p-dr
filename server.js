@@ -9,7 +9,8 @@ require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 8000;
-
+let receiveMode = false;
+let sharedFiles = [];
 // ========================
 // CREATE UPLOAD FOLDER
 // ========================
@@ -39,15 +40,18 @@ app.use(
     cookie: {
       httpOnly: true,
       secure: false,
-      maxAge: 1000 * 60 * 60 * 24
-    }
+      maxAge: 1000 * 60 * 60 * 24,
+    },
   })
 );
 
 // app.use(express.static(path.join(__dirname, "public")));
 
 app.use((req, res, next) => {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, proxy-revalidate"
+  );
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
   next();
@@ -58,12 +62,16 @@ app.use((req, res, next) => {
 // ========================
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir);
+    if (req.path === "/zz") {
+      cb(null, receivedDir);
+    } else {
+      cb(null, uploadDir);
+    }
   },
   filename: (req, file, cb) => {
     const unique = Date.now() + "-" + file.originalname;
     cb(null, unique);
-  }
+  },
 });
 
 const upload = multer({ storage });
@@ -105,21 +113,132 @@ app.post("/login", async (req, res) => {
     if (!match) {
       return res.status(401).json({
         success: false,
-        message: "Wrong password"
+        message: "Wrong password",
       });
     }
 
     req.session.authenticated = true;
 
     return res.json({
-      success: true
+      success: true,
     });
   } catch (err) {
     return res.status(500).json({
       success: false,
-      message: "Server error"
+      message: "Server error",
     });
   }
+});
+
+app.get("/toggle-receive", isAuth, (req, res) => {
+  receiveMode = !receiveMode;
+
+  return res.json({
+    receiveMode,
+  });
+});
+
+app.get("/receive-status", (req, res) => {
+  return res.json({
+    receiveMode,
+  });
+});
+
+const receivedDir = path.join(__dirname, "uploads", "received");
+
+if (!fs.existsSync(receivedDir)) {
+  fs.mkdirSync(receivedDir, { recursive: true });
+}
+
+app.post("/zz", upload.single("file"), (req, res) => {
+  if (!receiveMode) {
+    fs.unlinkSync(path.join(receivedDir, req.file.filename));
+
+    return res.json({
+      success: false,
+      message: "WAIT: Receiver OFF",
+    });
+  }
+
+  return res.json({
+    success: true,
+  });
+});
+
+app.get("/api/received", isAuth, (req, res) => {
+  const files = fs.readdirSync(receivedDir);
+
+  const data = files.map((file) => {
+    const filePath = path.join(receivedDir, file);
+    const stats = fs.statSync(filePath);
+
+    return {
+      name: file,
+      size: stats.size,
+      created: stats.birthtimeMs,
+    };
+  });
+
+  data.sort((a, b) => b.created - a.created);
+
+  res.json(data);
+});
+
+app.post("/share-file", isAuth, (req, res) => {
+  const { name } = req.body;
+
+  if (!sharedFiles.includes(name)) {
+    sharedFiles.push(name);
+  }
+
+  res.json({
+    success: true,
+  });
+});
+
+app.get("/api/shared-files", (req, res) => {
+  const data = sharedFiles
+    .map((file) => {
+      const filePath = path.join(uploadDir, file);
+
+      if (!fs.existsSync(filePath)) return null;
+
+      const stats = fs.statSync(filePath);
+
+      return {
+        name: file,
+        size: stats.size,
+      };
+    })
+    .filter(Boolean);
+
+  res.json(data);
+});
+
+app.get("/public-download/:name", (req, res) => {
+  const fileName = req.params.name;
+
+  if (!sharedFiles.includes(fileName)) {
+    return res.status(403).send("Not shared");
+  }
+
+  const filePath = path.join(uploadDir, fileName);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("File missing");
+  }
+
+  res.download(filePath);
+});
+
+app.post("/unshare-file", isAuth, (req, res) => {
+  const { name } = req.body;
+
+  sharedFiles = sharedFiles.filter((f) => f !== name);
+
+  res.json({
+    success: true,
+  });
 });
 
 // ========================
@@ -134,59 +253,54 @@ app.get("/hm.html", isAuth, (req, res) => {
 // ========================
 app.use(
   express.static(path.join(__dirname, "public"), {
-    index: false
+    index: false,
   })
 );
 
 // ========================
 // GET FILES
 // ========================
-app.get("/api/files", isAuth, async (req, res) => {
-  try {
-    const files = fs.readdirSync(uploadDir);
+app.get("/api/files", isAuth, (req, res) => {
+  const files = fs.readdirSync(uploadDir);
 
-    const detailed = files.map((file) => {
+  const data = files
+    .filter((f) => f !== "received")
+    .map((file) => {
       const filePath = path.join(uploadDir, file);
       const stats = fs.statSync(filePath);
 
       return {
         name: file,
         size: stats.size,
-        created: stats.birthtimeMs
+        created: stats.birthtimeMs,
       };
     });
 
-    detailed.sort((a, b) => b.created - a.created);
+  data.sort((a, b) => b.created - a.created);
 
-    return res.json(detailed);
-  } catch (err) {
-    return res.status(500).json({ message: "Failed" });
-  }
+  res.json(data);
 });
 
 // ========================
 // UPLOAD
 // ========================
-app.post(
-  "/upload",
-  isAuth,
-  upload.single("file"),
-  (req, res) => {
-    return res.json({
-      success: true,
-      file: req.file.filename
-    });
-  }
-);
+app.post("/upload", isAuth, upload.single("file"), (req, res) => {
+  return res.json({
+    success: true,
+    file: req.file.filename,
+  });
+});
 
 // ========================
 // DOWNLOAD
 // ========================
-app.get("/download/:name", isAuth, (req, res) => {
-  const filePath = path.join(uploadDir, req.params.name);
+app.get("/download/:type/:name", isAuth, (req, res) => {
+  const dir = req.params.type === "received" ? receivedDir : uploadDir;
+
+  const filePath = path.join(dir, req.params.name);
 
   if (!fs.existsSync(filePath)) {
-    return res.status(404).send("File not found");
+    return res.status(404).send("Not found");
   }
 
   res.download(filePath);
@@ -200,25 +314,20 @@ app.delete("/delete/:name", isAuth, (req, res) => {
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({
-      success: false
+      success: false,
     });
   }
 
   fs.unlinkSync(filePath);
 
   return res.json({
-    success: true
+    success: true,
   });
 });
 
 // ========================
 // LOGOUT
 // ========================
-// app.get("/logout", (req, res) => {
-//   req.session.destroy(() => {
-//     res.redirect("/ap");
-//   });
-// });
 app.get("/logout", (req, res) => {
   req.session.destroy(() => {
     res.clearCookie("connect.sid");
@@ -226,7 +335,7 @@ app.get("/logout", (req, res) => {
     res.setHeader("Cache-Control", "no-store");
 
     return res.json({
-      success: true
+      success: true,
     });
   });
 });
